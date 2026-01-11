@@ -1,0 +1,51 @@
+{
+  "1238023236": {
+    "displayName": "Pedro",
+    "lastUpdated": "2025-10-09T15:04:41.368Z",
+    "selectedGame": "ludo"
+  },
+  "1604252279": {
+    "displayName": "elpatroncito",
+    "lastUpdated": "2025-10-09T00:43:58.691Z"
+  },
+  "cache": {
+    "nickname_limit:987654321": {
+      "value": {
+        "lastChange": 1756508740850,
+        "changesThisWeek": 1,
+        "firstChangeOfWeek": 1756508740850
+      },
+      "expiresAt": 1757113540850
+    },
+    "test_key": {
+      "value": {
+        "data": "test"
+      },
+      "expiresAt": 1756508857188
+    },
+    "nickname_limit:1604252279": {
+      "value": {
+        "lastChange": 1756508941307,
+        "changesThisWeek": 1,
+        "firstChangeOfWeek": 1756508941307
+      },
+      "expiresAt": 1757113741307
+    },
+    "nickname_limit:123456789": {
+      "value": {
+        "lastChange": 1756510232055,
+        "changesThisWeek": 0,
+        "firstChangeOfWeek": 1756510232055
+      },
+      "expiresAt": 1757115032055
+    },
+    "nickname_limit:7250505651": {
+      "value": {
+        "lastChange": 1756510658839,
+        "changesThisWeek": 1,
+        "firstChangeOfWeek": 1756510658839
+      },
+      "expiresAt": 1757115458839
+    }
+  }
+}

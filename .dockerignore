@@ -1,0 +1,90 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# User state (debe manejarse en persistencia cloud, no en contenedor)
+user-state.json
+
+# Testing
+coverage/
+*.lcov
+test-results/
+__tests__/
+*.test.js
+*.spec.js
+
+# Build artifacts
+dist/
+build/
+.cache/
+
+# Editor directories
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Test files
+test/
+tests/
+*.http
+pruebas.http
+
+# Fly.io
+.fly/
+fly.toml
+
+# Archivos de configuración locales
+config/migration-backup.json
+config/nodemon.json
+
+# Backups
+*.backup
+*.bak
+
+# Webapps (no necesarios en el bot)
+webapps/
+
+# Scripts de prueba
+scripts/test-*.js
+scripts/check-*.js
+scripts/debug-*.js
+scripts/temp/
+

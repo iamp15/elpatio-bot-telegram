@@ -1,0 +1,398 @@
+"use strict";
+
+const BOT_CONFIG = require("../config/bot-config");
+const userStateManager = require("../user-state");
+const { registerOrFindPlayer, sendFilteredRooms } = require("../utils/helpers");
+
+// Variables de entorno
+const TEST_MODE = process.env.TEST_MODE === "true" || !process.env.BACKEND_URL;
+
+// Datos de prueba para cuando el backend no esté disponible
+const TEST_SALAS = [
+  {
+    _id: "sala_test_1",
+    juego: "ludo",
+    modo: "1v1v1v1",
+    configuracion: {
+      entrada: 5000,
+      premio: 20000,
+    },
+    jugadores: [],
+  },
+  {
+    _id: "sala_test_2",
+    juego: "ludo",
+    modo: "2v2",
+    configuracion: {
+      entrada: 3000,
+      premio: 12000,
+    },
+    jugadores: [{ id: "jugador1" }],
+  },
+];
+
+/**
+ * Maneja la selección de juego
+ */
+async function handleSelectGame(bot, api, callbackQuery, gameId) {
+  const { message, from } = callbackQuery;
+  const chatId = message.chat.id;
+
+  const selectedGame = BOT_CONFIG.juegos.find((j) => j.id === gameId);
+
+  if (!selectedGame) {
+    await bot.answerCallbackQuery(callbackQuery.id, {
+      text: "Juego no encontrado.",
+    });
+    return;
+  }
+
+  // Verificar si el juego está disponible
+  if (!selectedGame.disponible) {
+    await bot.answerCallbackQuery(callbackQuery.id, {
+      text: `${selectedGame.nombre} - Próximamente`,
+    });
+
+    const mensajeNoDisponible = BOT_CONFIG.messages.juegoNoDisponible(
+      selectedGame.nombre
+    );
+    await bot.sendMessage(chatId, mensajeNoDisponible, {
+      parse_mode: "Markdown",
+    });
+    return;
+  }
+
+  // Guardar el juego seleccionado para este usuario
+  userStateManager.setSelectedGame(from.id, gameId);
+
+  // Acknowledge callback
+  await bot.answerCallbackQuery(callbackQuery.id, {
+    text: `Juego seleccionado: ${selectedGame.nombre}`,
+  });
+
+  // Automáticamente mostrar las salas disponibles
+  try {
+    let salas;
+
+    if (TEST_MODE) {
+      salas = TEST_SALAS;
+    } else {
+      // Agregar timeout para evitar bloqueos
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout")), 10000)
+      );
+
+      const salasPromise = api.getSalasDisponibles();
+      salas = await Promise.race([salasPromise, timeoutPromise]);
+    }
+
+    await sendFilteredRooms(
+      bot,
+      chatId,
+      salas,
+      gameId,
+      selectedGame.nombre,
+      api
+    );
+  } catch (err) {
+    console.error("❌ Error obteniendo salas:", err.message);
+    await bot.sendMessage(
+      chatId,
+      "❌ Error obteniendo salas. Intenta de nuevo."
+    );
+  }
+}
+
+/**
+ * Maneja la selección de modo para crear sala
+ */
+async function handleCreateSalaMode(bot, api, callbackQuery, modo) {
+  const { message, from } = callbackQuery;
+  const chatId = message.chat.id;
+  const userId = from.id;
+
+  try {
+    // Obtener el juego seleccionado
+    const selectedGame = userStateManager.getSelectedGame(userId);
+    if (!selectedGame) {
+      await bot.answerCallbackQuery(callbackQuery.id, {
+        text: "Primero selecciona un juego.",
+      });
+      return;
+    }
+
+    const juego = BOT_CONFIG.juegos.find((j) => j.id === selectedGame);
+    if (!juego) {
+      await bot.answerCallbackQuery(callbackQuery.id, {
+        text: "Juego no encontrado.",
+      });
+      return;
+    }
+
+    // Guardar el modo seleccionado en el estado del usuario
+    userStateManager.setState(userId, {
+      ...userStateManager.getState(userId),
+      creatingSala: {
+        modo,
+        juego: selectedGame,
+      },
+    });
+
+    // Acknowledge callback
+    await bot.answerCallbackQuery(callbackQuery.id, {
+      text: `Modo seleccionado: ${juego.modos[modo]?.nombre || modo}`,
+    });
+
+    // Solicitar nombre de la sala
+    await bot.sendMessage(
+      chatId,
+      `📝 **Nombre de la Sala**
+
+Escribe el nombre para tu sala de ${juego.nombre} (${
+        juego.modos[modo]?.nombre || modo
+      }):
+
+💡 **Sugerencias:**
+• Sala de ${from.first_name}
+• ${juego.nombre} ${modo}
+• Mi ${juego.nombre} favorito
+
+📝 Envía el nombre de la sala:`,
+      { parse_mode: "Markdown" }
+    );
+  } catch (err) {
+    console.error("❌ Error en selección de modo:", err.message);
+    await bot.answerCallbackQuery(callbackQuery.id, { text: "❌ Error" });
+    await bot.sendMessage(
+      chatId,
+      "❌ Error procesando selección. Intenta de nuevo."
+    );
+  }
+}
+
+/**
+ * Maneja la creación final de la sala
+ */
+async function handleCreateSalaFinal(bot, api, msg) {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+  const nombreSala = msg.text.trim();
+
+  try {
+    // Validar nombre de sala
+    if (!nombreSala || nombreSala.length < 3) {
+      await bot.sendMessage(
+        chatId,
+        "❌ **Nombre de sala inválido**\n\nEl nombre debe tener al menos 3 caracteres.\n\n📝 Intenta de nuevo:",
+        { parse_mode: "Markdown" }
+      );
+      return;
+    }
+
+    if (nombreSala.length > 100) {
+      await bot.sendMessage(
+        chatId,
+        "❌ **Nombre de sala muy largo**\n\nEl nombre debe tener máximo 100 caracteres.\n\n📝 Intenta de nuevo:",
+        { parse_mode: "Markdown" }
+      );
+      return;
+    }
+
+    // Obtener datos de la sala en creación
+    const userState = userStateManager.getState(userId);
+    const salaEnCreacion = userState.creatingSala;
+
+    if (!salaEnCreacion) {
+      await bot.sendMessage(
+        chatId,
+        "❌ **Error en el proceso**\n\nNo se encontraron datos de la sala en creación. Intenta crear la sala nuevamente.",
+        { parse_mode: "Markdown" }
+      );
+      return;
+    }
+
+    const { modo, juego } = salaEnCreacion;
+    const juegoConfig = BOT_CONFIG.juegos.find((j) => j.id === juego);
+
+    if (!juegoConfig) {
+      await bot.sendMessage(
+        chatId,
+        "❌ **Juego no encontrado**\n\nEl juego seleccionado ya no está disponible.",
+        { parse_mode: "Markdown" }
+      );
+      return;
+    }
+
+    // Configuración por defecto para la sala
+    const configuracion = {
+      entrada: 5000, // 50 Bs por defecto
+      premio: 20000, // 200 Bs por defecto (4x la entrada)
+    };
+
+    // Crear la sala en el backend
+    const salaData = {
+      nombre: nombreSala,
+      juego,
+      modo,
+      configuracion,
+    };
+
+    let salaCreada;
+    if (TEST_MODE) {
+      // Simular creación en modo TEST
+      salaCreada = {
+        _id: `sala_test_${Date.now()}`,
+        ...salaData,
+        jugadores: [],
+        estado: "esperando",
+        creadaEn: new Date(),
+      };
+    } else {
+      // Crear en el backend real
+      const response = await api.createSala(salaData);
+      salaCreada = response.sala || response;
+    }
+
+    // Limpiar estado de creación
+    userStateManager.setState(userId, {
+      ...userState,
+      creatingSala: null,
+    });
+
+    // Mensaje de confirmación
+    await bot.sendMessage(
+      chatId,
+      `✅ **¡Sala creada exitosamente!**
+
+🏗️ **Sala:** ${salaCreada.nombre}
+🎮 **Juego:** ${juegoConfig.nombre}
+⚔️ **Modo:** ${juegoConfig.modos[modo]?.nombre || modo}
+💰 **Entrada:** $${configuracion.entrada}
+🏆 **Premio:** $${configuracion.premio}
+🆔 **ID:** ${salaCreada._id || salaCreada.id}
+
+📋 **Próximos pasos:**
+• Otros jugadores pueden unirse a tu sala
+• El pago se gestionará cuando se complete
+• ¡Disfruta tu partida!`,
+      { parse_mode: "Markdown" }
+    );
+  } catch (err) {
+    console.error("❌ Error creando sala:", err.message);
+
+    // Limpiar estado en caso de error
+    userStateManager.setState(userId, {
+      ...userStateManager.getState(userId),
+      creatingSala: null,
+    });
+
+    await bot.sendMessage(
+      chatId,
+      "❌ **Error creando la sala**\n\nHubo un problema al crear la sala. Intenta de nuevo o contacta al admin.",
+      { parse_mode: "Markdown" }
+    );
+  }
+}
+
+/**
+ * Maneja el proceso de unirse a una sala
+ */
+async function handleJoinSala(bot, api, callbackQuery, salaId) {
+  const { message, from } = callbackQuery;
+  const chatId = message.chat.id;
+
+  try {
+    // 1) Buscar o crear jugador en backend (por telegramId)
+    const jugador = await registerOrFindPlayer(api, from);
+
+    // 2) Llamar al endpoint para unir al jugador (bot es quien llama)
+    const joinRes = await api.joinSala(salaId, jugador._id || jugador.id);
+    const sala = joinRes.sala || joinRes;
+
+    // 3) Responder al jugador (sin crear pago por ahora)
+    await bot.sendMessage(
+      chatId,
+      `✅ **¡Te has unido a la sala exitosamente!**
+
+🎮 **Sala:** ${sala._id || sala.id}
+💰 **Entrada:** $${sala.configuracion?.entrada || 0}
+👥 **Jugadores:** ${sala.jugadores?.length || 0}
+
+📋 **Próximos pasos:**
+• El pago se gestionará más tarde
+• Espera a que se complete la sala
+• ¡Disfruta tu partida!`,
+      { parse_mode: "Markdown" }
+    );
+
+    // Acknowledge callback
+    await bot.answerCallbackQuery(callbackQuery.id, {
+      text: "✅ Unido a la sala exitosamente",
+    });
+  } catch (err) {
+    console.error("❌ Error en join sala:", err.response?.data || err.message);
+
+    // Verificar si es el error específico de "ya estás en la sala"
+    const errorData = err.response?.data || err.message;
+    if (
+      errorData &&
+      typeof errorData === "object" &&
+      errorData.mensaje === "Ya estás en la sala"
+    ) {
+      await bot.sendMessage(
+        chatId,
+        "ℹ️ **Ya te encuentras en esta sala**\n\nNo puedes unirte dos veces a la misma sala."
+      );
+      await bot.answerCallbackQuery(callbackQuery.id, {
+        text: "Ya estás en la sala",
+      });
+    } else {
+      // Error genérico
+      await bot.sendMessage(
+        chatId,
+        "❌ Error uniéndote a la sala. Intenta de nuevo o contacta al admin."
+      );
+      await bot.answerCallbackQuery(callbackQuery.id, { text: "❌ Error" });
+    }
+  }
+}
+
+/**
+ * Maneja todas las callback queries
+ */
+async function handleCallbackQuery(bot, api, callbackQuery) {
+  const { data, message, from } = callbackQuery;
+  const chatId = message.chat.id;
+
+  try {
+    if (data && data.startsWith("select_game:")) {
+      // Selección de juego
+      const gameId = data.split(":")[1];
+      await handleSelectGame(bot, api, callbackQuery, gameId);
+    } else if (data && data.startsWith("join:")) {
+      // Unirse a sala
+      const salaId = data.split(":")[1];
+      await handleJoinSala(bot, api, callbackQuery, salaId);
+    } else if (data && data.startsWith("create_sala_mode:")) {
+      // Crear sala - selección de modo
+      const modo = data.split(":")[1];
+      await handleCreateSalaMode(bot, api, callbackQuery, modo);
+    } else {
+      await bot.answerCallbackQuery(callbackQuery.id, {
+        text: "Acción desconocida.",
+      });
+    }
+  } catch (err) {
+    console.error("❌ Error en callback:", err.response?.data || err.message);
+    await bot.sendMessage(
+      chatId,
+      "Error procesando la acción. Intenta de nuevo o contacta al admin."
+    );
+    await bot.answerCallbackQuery(callbackQuery.id, { text: "Error" });
+  }
+}
+
+module.exports = {
+  handleCallbackQuery,
+  handleCreateSalaFinal,
+};
