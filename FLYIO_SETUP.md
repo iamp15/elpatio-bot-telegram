@@ -1,27 +1,100 @@
-# Configuración de Variables de Entorno para el Bot en Fly.io
+# Configuración del Bot en Fly.io
 
 ## Bot Telegram (bot-telegram)
+
+## 🚀 Deploy Automático con GitHub Actions
+
+El bot está configurado para desplegarse automáticamente en Fly.io cuando se hace push a las ramas `master` o `main` del repositorio.
+
+### Configuración Inicial
+
+1. **Instalar Fly CLI** (si no está instalado):
+   ```powershell
+   # En PowerShell
+   iwr https://fly.io/install.ps1 -useb | iex
+   ```
+   O visita: https://fly.io/docs/getting-started/installing-flyctl/
+
+2. **Iniciar sesión en Fly.io** (si no has iniciado sesión):
+   ```bash
+   flyctl auth login
+   ```
+   Esto abrirá tu navegador para autenticarte.
+
+3. **Obtener el Token de Fly.io**:
+   ```bash
+   flyctl auth token
+   ```
+   O usa el comando recomendado (más reciente):
+   ```bash
+   flyctl tokens create deployer
+   ```
+   Copia el token que se muestra (formato: `fo1_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`)
+   
+   **Nota**: El token es el mismo para todas tus aplicaciones de Fly.io. Si ya lo configuraste en otro repositorio, puedes reutilizarlo.
+
+4. **Configurar el Secret en GitHub**:
+   - Ve a tu repositorio en GitHub: `elpatio-bot-telegram`
+   - Haz clic en **Settings** (Configuración)
+   - En el menú lateral, haz clic en **Secrets and variables** → **Actions**
+   - Haz clic en **New repository secret**
+   - Configura:
+     - **Name**: `FLY_API_TOKEN`
+     - **Secret**: Pega el token que copiaste
+   - Haz clic en **Add secret**
+
+5. **Verificar el Workflow**:
+   El workflow se encuentra en `.github/workflows/fly-deploy.yml` y se ejecutará automáticamente cuando:
+   - Hagas push a `main` o `master`
+   - O ejecutes manualmente desde la pestaña **Actions** en GitHub
+
+### Forzar Deploy Manual
+
+#### Opción 1: Desde GitHub (interfaz web)
+1. Ve a tu repositorio en GitHub
+2. Haz clic en **Actions**
+3. Selecciona el workflow "Fly Deploy"
+4. Haz clic en **Run workflow**
+5. Selecciona la rama y haz clic en **Run workflow**
+
+#### Opción 2: Desde terminal
+```bash
+cd bot-telegram
+flyctl deploy
+```
+
+### Monitoreo de Deploys
+
+Puedes ver el progreso del deploy en:
+1. **GitHub**: Pestaña **Actions** → selecciona el workflow en ejecución
+2. **Fly.io Dashboard**: https://fly.io/dashboard
+3. **Logs en tiempo real** (desde tu terminal):
+   ```bash
+   flyctl logs -a elpatio-bot
+   ```
+
+## 🔐 Configuración de Variables de Entorno
 
 Ejecuta estos comandos desde el directorio `bot-telegram`:
 
 ```bash
 # Variables obligatorias
-fly secrets set NODE_ENV=production
-fly secrets set BOT_TOKEN="tu_bot_token_de_telegram"
-fly secrets set BACKEND_URL="https://elpatio-backend.fly.dev"
+flyctl secrets set NODE_ENV=production -a elpatio-bot
+flyctl secrets set BOT_TOKEN="tu_bot_token_de_telegram" -a elpatio-bot
+flyctl secrets set BACKEND_URL="https://elpatio-backend.fly.dev" -a elpatio-bot
 
 # Credenciales del bot para autenticarse en el backend
-fly secrets set BOT_EMAIL="email_del_bot@example.com"
-fly secrets set BOT_PASSWORD="password_seguro"
+flyctl secrets set BOT_EMAIL="email_del_bot@example.com" -a elpatio-bot
+flyctl secrets set BOT_PASSWORD="password_seguro" -a elpatio-bot
 
 # JWT del bot (si se usa pre-token)
-# fly secrets set BOT_JWT="token_jwt_si_lo_usas"
+# flyctl secrets set BOT_JWT="token_jwt_si_lo_usas" -a elpatio-bot
 ```
 
 ## Verificar secrets configurados
 
 ```bash
-fly secrets list
+flyctl secrets list -a elpatio-bot
 ```
 
 ## Notas importantes
@@ -36,7 +109,7 @@ fly secrets list
 Después del deploy:
 
 ```bash
-fly logs -a elpatio-bot
+flyctl logs -a elpatio-bot
 
 # Deberías ver algo como:
 # ✅ Bot autenticado en el backend
