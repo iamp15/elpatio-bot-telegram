@@ -1,7 +1,12 @@
 {
   "name": "bot-telegram",
+<<<<<<< Updated upstream
   "version": "1.0.0",
   "description": "",
+=======
+  "version": "0.1.2",
+  "description": "Prueba de commit manual",
+>>>>>>> Stashed changes
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
