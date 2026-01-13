@@ -284,5 +284,3 @@ bot.on("callback_query", (callbackQuery) =>
 
 // === MENSAJES DE TEXTO ===
 bot.on("message", (msg) => handleTextMessage(bot, api, msg));
-
-console.log(`🤖 Bot iniciado correctamente - Versión ${BOT_VERSION}`);
