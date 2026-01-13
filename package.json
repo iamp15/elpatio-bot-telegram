@@ -1,6 +1,6 @@
 {
   "name": "bot-telegram",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Prueba de commit manual",
   "main": "index.js",
   "scripts": {

@@ -4,6 +4,10 @@ require("dotenv").config();
 const TelegramBot = require("node-telegram-bot-api");
 const BackendAPI = require("./api/backend");
 
+// Obtener versión del bot desde package.json
+const packageJson = require("./package.json");
+const BOT_VERSION = packageJson.version;
+
 // Importar módulos
 const commands = require("./handlers/commands");
 const { handleCallbackQuery } = require("./handlers/callbacks");
@@ -57,6 +61,9 @@ const api = new BackendAPI({
 let wsClient = null;
 let notificationHandler = null;
 let pollingFallback = null;
+
+// Mostrar versión del bot al inicio
+console.log(`🚀 Iniciando Bot de Telegram El Patio - Versión ${BOT_VERSION}`);
 
 // Login al backend (obtiene el JWT) al iniciar
 (async () => {
@@ -278,4 +285,4 @@ bot.on("callback_query", (callbackQuery) =>
 // === MENSAJES DE TEXTO ===
 bot.on("message", (msg) => handleTextMessage(bot, api, msg));
 
-console.log("🤖 Bot iniciado correctamente");
+console.log(`🤖 Bot iniciado correctamente - Versión ${BOT_VERSION}`);
