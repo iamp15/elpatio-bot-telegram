@@ -29,6 +29,8 @@ Configuraciones relacionadas con l�mites del sistema.
 | ------------------ | --------------- | ---------------- | ---------- |
 | \deposito.minimo\  | Dep�sito m�nimo | 10000            | 100 Bs     |
 | \deposito.maximo\  | Dep�sito m�ximo | 15000000         | 150.000 Bs |
+| \deposito.timeout.pendiente\ | Tiempo de vencimiento para depósitos pendientes (minutos) | 10 | 10 minutos |
+| \deposito.timeout.en_proceso\ | Tiempo de vencimiento para depósitos en proceso (minutos) | 20 | 20 minutos |
 
 | \
 etiro.minimo\ | Retiro m�nimo | 50000 | 500 Bs |
@@ -165,7 +167,7 @@ El backend debe validar que las configKeys cumplan con esta estructura:
 \\\javascript
 const configKeysValidas = {
 precios: /^(ludo|domino)\.(1v1|2v2|1v1v1|1v1v1v1)$/,
-  limites: /^(deposito|retiro|balance)\.(minimo|maximo)$|^retiros\.(diarios|semanales)$/,
+  limites: /^(deposito|retiro|balance)\.(minimo|maximo)$|^deposito\.timeout\.(pendiente|en_proceso)$|^retiros\.(diarios|semanales)$/,
   comisiones: /^retiro\.(frecuencia_semanal|comision_fija)$|^deposito\.comision$/,
   moneda: /^(codigo|simbolo|formato|decimales)$/
 };
@@ -229,9 +231,10 @@ const precioFormateado = \\ Bs\; // \"700 Bs\"
 - ludo.1v1, ludo.2v2, ludo.1v1v1, ludo.1v1v1v1
 - domino.1v1, domino.2v2, domino.1v1v1, domino.1v1v1v1
 
-### **L�mites (7 configKeys):**
+### **Lmites (9 configKeys):**
 
 - deposito.minimo, deposito.maximo
+- deposito.timeout.pendiente, deposito.timeout.en_proceso
 - retiro.minimo, retiro.maximo
 - balance.maximo
 - retiros.diarios, retiros.semanales
@@ -251,4 +254,4 @@ const precioFormateado = \\ Bs\; // \"700 Bs\"
 
 - codigo, simbolo, formato, decimales
 
-**Total: 27 configKeys fijas**
+**Total: 29 configKeys fijas**
