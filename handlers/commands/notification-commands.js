@@ -183,6 +183,7 @@ function obtenerIcono(tipo) {
     deposito_rechazado: "❌",
     retiro_aprobado: "✅",
     retiro_rechazado: "❌",
+    retiro_completado: "✅",
     sala_completa: "🎮",
     juego_iniciado: "🎲",
   };

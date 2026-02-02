@@ -267,36 +267,68 @@ Próximamente podrás ver:
 }
 
 /**
- * Maneja la solicitud de retiro
+ * Maneja la solicitud de retiro - Abre la Mini App de retiros
  */
 async function handleWithdraw(bot, api, callbackQuery) {
   const chatId = callbackQuery.message.chat.id;
 
   try {
     await bot.answerCallbackQuery(callbackQuery.id, {
-      text: "Función en desarrollo",
+      text: "Abriendo Mini App de retiros...",
     });
+
+    const webAppUrl = getWebAppUrl("RETIRO");
 
     await bot.sendMessage(
       chatId,
-      `💸 <b>Retiro</b>
+      `💸 <b>Realizar Retiro</b>
 
-⚠️ <b>Función en desarrollo</b>
+💳 <b>Haz clic en el botón de abajo para abrir la Mini App de retiros</b>
 
-Próximamente podrás retirar tus ganancias.
+📱 <b>En la Mini App podrás:</b>
+• Ingresar el monto que deseas retirar
+• Indicar dónde recibir el dinero (pago móvil)
+• Seguir el estado de tu solicitud
+• Recibir el comprobante una vez completado
 
-💡 <b>Mientras tanto:</b>
-• Los juegos son gratuitos en modo prueba
-• El sistema de pagos estará disponible pronto
+🔒 <b>Seguro y confiable</b>
+• Todos los datos se procesan de forma segura
+• Comunicación directa con el sistema de transacciones
 
-¡Mantente atento a las actualizaciones!`,
-      { parse_mode: "HTML" }
+¡Haz clic en el botón para comenzar!`,
+      {
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "💳 Abrir Mini App de Retiros",
+                web_app: { url: webAppUrl },
+              },
+            ],
+            [
+              {
+                text: "⬅️ Volver al Perfil",
+                callback_data: "profile_main",
+              },
+            ],
+          ],
+        },
+      }
     );
   } catch (err) {
     console.error("❌ Error en withdraw:", err.message);
     await bot.answerCallbackQuery(callbackQuery.id, {
-      text: "Error procesando solicitud",
+      text: "Error abriendo Mini App",
     });
+
+    await bot.sendMessage(
+      chatId,
+      `❌ <b>Error</b>
+
+No se pudo abrir la Mini App de retiros. Por favor intenta de nuevo o contacta al administrador.`,
+      { parse_mode: "HTML" }
+    );
   }
 }
 
