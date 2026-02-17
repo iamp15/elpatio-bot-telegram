@@ -63,6 +63,17 @@ etiro.frecuencia_semanal.periodo_dias\ | Per�odo de reinicio (d�as) | 7 | 7 
 etiro.comision_fija\ | Comisi�n fija por retiro (centavos) | 1000 | 10 Bs |
 | \deposito.comision\ | Comisi�n por dep�sito (%) | 0 | 0% |
 
+#### **Comisiones al cajero (por transaccin completada)**
+
+Comisin que gana el cajero por cada depsito o retiro completado. Se puede configurar monto fijo y/o porcentaje; la comisin final es: **fija + (monto_transaccin porcentaje / 100)**.
+
+| ConfigKey | Descripcin | Valor | Ejemplo |
+| --------- | ----------- | ----- | ------- |
+| \cajero.comision.deposito_completado_fija\ | Monto fijo por depsito completado (centavos) | 0 | 1000 = 10 Bs |
+| \cajero.comision.deposito_completado_porcentaje\ | Porcentaje del monto del depsito (0-100) | 0 | 0,5 = 0,5% |
+| \cajero.comision.retiro_completado_fija\ | Monto fijo por retiro completado (centavos) | 0 | 500 = 5 Bs |
+| \cajero.comision.retiro_completado_porcentaje\ | Porcentaje del monto del retiro (0-100) | 0 | 1 = 1% |
+
 ### ?? **Tipo: \"moneda\"**
 
 Configuraciones relacionadas con la moneda del sistema.
@@ -239,7 +250,7 @@ const precioFormateado = \\ Bs\; // \"700 Bs\"
 - balance.maximo
 - retiros.diarios, retiros.semanales
 
-### **Comisiones (8 configKeys):**
+### **Comisiones (12 configKeys):**
 
 - retiro.frecuencia_semanal.primera_vez
 - retiro.frecuencia_semanal.segunda_vez
@@ -249,9 +260,13 @@ const precioFormateado = \\ Bs\; // \"700 Bs\"
 - retiro.comision_fija
 - deposito.comision
 - porcentaje_ganancias
+- cajero.comision.deposito_completado_fija
+- cajero.comision.deposito_completado_porcentaje
+- cajero.comision.retiro_completado_fija
+- cajero.comision.retiro_completado_porcentaje
 
 ### **Moneda (4 configKeys):**
 
 - codigo, simbolo, formato, decimales
 
-**Total: 29 configKeys fijas**
+**Total: 33 configKeys fijas**

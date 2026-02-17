@@ -15,10 +15,17 @@ class AuthService {
     this.isRefreshing = false;
     this.refreshPromise = null;
 
+    // Debug: mostrar la URL base que se está usando
+    console.log(`🔍 [AUTH-SERVICE] Configurando cliente con baseURL: ${baseUrl}`);
+
     // Configurar cliente axios
     this.client = axios.create({
       baseURL: baseUrl,
       timeout: 10000,
+      // Para desarrollo local con HTTP, deshabilitar validación SSL si es necesario
+      validateStatus: function (status) {
+        return status < 500; // Resolver solo si el código de estado es menor que 500
+      },
     });
 
     // Interceptor para manejar errores de autenticación
@@ -113,6 +120,7 @@ class AuthService {
   async performLogin() {
     try {
       console.log("🔄 Renovando token de autenticación...");
+      console.log(`🔍 [AUTH-SERVICE] Intentando login en: ${this.baseUrl}/api/admin/login`);
 
       const response = await this.client.post("/api/admin/login", {
         email: this.botEmail,

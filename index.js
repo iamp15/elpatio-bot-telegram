@@ -1,6 +1,26 @@
 "use strict";
 
+// IMPORTANTE: Leer BACKEND_URL ANTES de cargar dotenv para que las variables del proceso tengan prioridad
+// Guardar las variables de entorno del proceso antes de que dotenv las sobrescriba
+const PROCESS_BACKEND_URL = process.env.BACKEND_URL;
+const PROCESS_BOT_EMAIL = process.env.BOT_EMAIL;
+const PROCESS_BOT_PASSWORD = process.env.BOT_PASSWORD;
+
+// Cargar dotenv (cargará el archivo .env del bot)
 require("dotenv").config();
+
+// Restaurar las variables del proceso si existen (tienen prioridad sobre el .env)
+// Esto permite que el script dev-local.js sobrescriba BACKEND_URL
+if (PROCESS_BACKEND_URL) {
+  process.env.BACKEND_URL = PROCESS_BACKEND_URL;
+}
+if (PROCESS_BOT_EMAIL) {
+  process.env.BOT_EMAIL = PROCESS_BOT_EMAIL;
+}
+if (PROCESS_BOT_PASSWORD) {
+  process.env.BOT_PASSWORD = PROCESS_BOT_PASSWORD;
+}
+
 const TelegramBot = require("node-telegram-bot-api");
 const BackendAPI = require("./api/backend");
 
@@ -19,11 +39,21 @@ const NotificationHandler = require("./websocket/notification-handler");
 const PollingFallback = require("./websocket/polling-fallback");
 
 // Variables de entorno
+// Ahora process.env.BACKEND_URL tiene la prioridad correcta
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const BACKEND_URL = process.env.BACKEND_URL;
+let BACKEND_URL = process.env.BACKEND_URL;
 const BOT_EMAIL = process.env.BOT_EMAIL;
 const BOT_PASSWORD = process.env.BOT_PASSWORD;
 const PRE_TOKEN = process.env.BOT_JWT || null;
+
+// Debug: mostrar qué URL está usando el bot
+console.log(`🔍 [DEBUG] BACKEND_URL recibida: ${BACKEND_URL}`);
+
+// Normalizar BACKEND_URL: reemplazar localhost por 127.0.0.1 para evitar problemas con IPv6
+if (BACKEND_URL && BACKEND_URL.includes('localhost')) {
+  BACKEND_URL = BACKEND_URL.replace('localhost', '127.0.0.1');
+  console.log(`🔍 [DEBUG] BACKEND_URL normalizada: ${BACKEND_URL}`);
+}
 
 if (!BOT_TOKEN || !BACKEND_URL) {
   console.error("Faltan variables de entorno. Revisa .env");
@@ -66,26 +96,39 @@ let pollingFallback = null;
 console.log(`🚀 Iniciando Bot de Telegram El Patio - Versión ${BOT_VERSION}`);
 
 // Login al backend (obtiene el JWT) al iniciar
+// Agregar retry con delay para esperar a que el backend esté listo
 (async () => {
-  try {
-    await api.ensureAuth();
-    console.log("✅ Bot autenticado en el backend");
+  const maxRetries = 5;
+  const retryDelay = 3000; // 3 segundos entre intentos
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await api.ensureAuth();
+      console.log("✅ Bot autenticado en el backend");
 
-    // Mostrar información del token
-    const tokenInfo = api.getTokenInfo();
-    if (tokenInfo.expiresAt) {
-      console.log(
-        `📅 Token válido hasta: ${tokenInfo.expiresAt.toLocaleString("es-ES")}`
-      );
+      // Mostrar información del token
+      const tokenInfo = api.getTokenInfo();
+      if (tokenInfo.expiresAt) {
+        console.log(
+          `📅 Token válido hasta: ${tokenInfo.expiresAt.toLocaleString("es-ES")}`
+        );
+      }
+
+      // Inicializar WebSocket y sistema de notificaciones
+      await initWebSocketSystem();
+      break; // Salir del loop si fue exitoso
+    } catch (err) {
+      if (attempt < maxRetries) {
+        console.log(`⚠️  Intento ${attempt}/${maxRetries} fallido. Reintentando en ${retryDelay/1000}s...`);
+        console.log(`   Error: ${err.message}`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      } else {
+        console.error("❌ Error autenticando el bot en backend después de", maxRetries, "intentos:", err.message);
+        console.error(
+          "⚠️  El bot continuará funcionando pero algunas funciones pueden fallar"
+        );
+      }
     }
-
-    // Inicializar WebSocket y sistema de notificaciones
-    await initWebSocketSystem();
-  } catch (err) {
-    console.error("❌ Error autenticando el bot en backend:", err.message);
-    console.error(
-      "⚠️  El bot continuará funcionando pero algunas funciones pueden fallar"
-    );
   }
 })();
 
